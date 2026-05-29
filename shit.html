@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NearbyMatch - Find Friends & More</title>
+    <style>
+        :root {
+            --primary-color: #ff4757;
+            --premium-color: #eccc68;
+            --bg-color: #f1f2f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 350px;
+            height: 650px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header & Premium Banner */
+        header {
+            padding: 15px;
+            text-align: center;
+            background: white;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .vip-toggle-btn {
+            background: #2f3542;
+            color: var(--premium-color);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .vip-active .vip-toggle-btn {
+            background: var(--premium-color);
+            color: #2f3542;
+        }
+
+        /* Premium Premium Panel */
+        .premium-panel {
+            background: #2f3542;
+            color: white;
+            padding: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .genre-select {
+            background: #57606f;
+            color: white;
+            border: none;
+            padding: 3px;
+            border-radius: 5px;
+        }
+
+        /* Card Area */
+        .card-container {
+            flex: 1;
+            position: relative;
+            margin: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .radar-screen {
+            text-align: center;
+            color: #747d8c;
+        }
+
+        .pulse {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+        }
+
+        .user-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            cursor: grab;
+        }
+
+        .user-card img {
+            width: 100%;
+            height: 70%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .user-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .user-distance {
+            color: #747d8c;
+            font-size: 0.9rem;
+        }
+
+        /* Buttons Control */
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: white;
+        }
+
+        .btn {
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.9); }
+        .btn-left { background: #ff4757; color: white; }
+        .btn-right { background: #2ed573; color: white; }
+
+        /* Actions Overlay/Stats */
+        .status-counter {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #a4b0be;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="app">
+        <header>
+            <span>❤️ NearbyMatch</span>
+            <button class="vip-toggle-btn" onclick="toggleVIP()">Go VIP 🌟</button>
+        </header>
+
+        <div class="premium-panel">
+            <span id="vip-status-text">💎 Standard Account (3 Matches Left)</span>
+            <div style="margin-top: 5px;">
+                <label for="genre">Filter Genre/Interest: </label>
+                <select id="genre" class="genre-select" onchange="filterGenre()" disabled>
+                    <option value="all">All Genres (VIP Only)</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Music">Music</option>
+                    <option value="Gaming">Gaming</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card-container" id="cardContainer">
+            <div class="radar-screen" id="radar">
+                <div class="pulse"></div>
+                <h3>Scanning for nearby friends...</h3>
+                <p id="geo-status">Requesting location...</p>
+            </div>
+        </div>
+
+        <div class="status-counter" id="statusCounter">Friends Added: 0</div>
+
+        <div class="controls">
+            <button class="btn btn-left" onclick="swipe('left')">❌</button>
+            <button class="btn btn-right" onclick="swipe('right')">💚</button>
+        </div>
+    </div>
+
+<script>
+    // Mock Database of users with specific genres
+    const mockUsers = [
+        { name: "Alex, 24", distance: "0.5 miles away", genre: "Sports", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400" },
+        { name: "Jordan, 27", distance: "1.2 miles away", genre: "Gaming", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400" },
+        { name: "Taylor, 22", distance: "2.5 miles away", genre: "Music", img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400" },
+        { name: "Sam, 26", distance: "3.1 miles away", genre: "Sports", img: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400" },
+        { name: "Morgan, 25", distance: "0.8 miles away", genre: "Music", img: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400" }
+    ];
+
+    let appState = {
+        isVIP: false,
+        matchesRemaining: 3,
+        friendsCount: 0,
+        currentUserIndex: 0,
+        currentFilter: 'all',
+        filteredUsers: []
+    };
+
+    // Geolocation API activation Simulation
+    window.onload = function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById('geo-status').innerText = `Location secured! Rendering matches...`;
+                    setTimeout(initSwipeDeck, 1500);
+                },
+                (error) => {
+                    document.getElementById('geo-status').innerText = `Using default city center radius...`;
+                    setTimeout(initSwipeDeck, 1500);
+                }
+            );
+        } else {
+            document.getElementById('geo-status').innerText = `Location services unsupported.`;
+            setTimeout(initSwipeDeck, 1500);
+        }
+    };
+
+    function initSwipeDeck() {
+        appState.filteredUsers = [...mockUsers];
+        renderCard();
+    }
+
+    function renderCard() {
+        const container = document.getElementById('cardContainer');
+        
+        // Remove old card if it exists
+        const oldCard = document.querySelector('.user-card');
+        if (oldCard) oldCard.remove();
+
+        if (appState.currentUserIndex >= appState.filteredUsers.length) {
+            container.innerHTML = `<div class='radar-screen'><h3>No one else nearby! Try changing filters or check back later.</h3></div>`;
+            return;
+        }
+
+        // Hide radar if active
+        document.getElementById('radar').style.display = 'none';
+
+        const user = appState.filteredUsers[appState.currentUserIndex];
+
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.innerHTML = `
+            <img src="${user.img}" alt="${user.name}">
+            <div class="user-info">
+                <div>
+                    <div class="user-name">${user.name}</div>
+                    <div class="user-distance">📍 ${user.distance}</div>
+                </div>
+                <div style="font-size:0.8rem; background:#eee; padding:3px 8px; border-radius:10px; width:fit-content;">
+                    🎯 Interested in: ${user.genre}
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+        setupDragAndDrop(card);
+    }
+
+    // Swipe mechanics (Buttons & Gestures)
+    function swipe(direction) {
+        const card = document.querySelector('.user-card');
+        if (!card) return;
+
+        // Premium Restriction Check
+        if (!appState.isVIP && appState.matchesRemaining <= 0) {
+            alert("🛑 Out of Swipes! Upgrade to VIP for Infinite Matching and Genre Selector privileges.");
+            return;
+        }
+
+        if (direction === 'right') {
+            card.style.transform = 'translateX(150%) rotate(30deg)';
+            card.style.opacity = '0';
+            appState.friendsCount++;
+            document.getElementById('statusCounter').innerText = `Friends Added: ${appState.friendsCount}`;
+        } else {
+            card.style.transform = 'translateX(-150%) rotate(-30deg)';
+            card.style.opacity = '0';
+        }
+
+        if (!appState.isVIP) {
+            appState.matchesRemaining--;
+            updateVipUI();
+        }
+
+        appState.currentUserIndex++;
+        setTimeout(renderCard, 400);
+    }
+
+    // VIP Account Functionality Toggle
+    function toggleVIP() {
+        appState.isVIP = !appState.isVIP;
+        const appElement = document.getElementById('app');
+        const genreDropdown = document.getElementById('genre');
+
+        if (appState.isVIP) {
+            appElement.classList.add('vip-active');
+            genreDropdown.disabled = false;
+            alert("🌟 VIP Membership Activated! Enjoy infinite swiping and genre filters.");
+        } else {
+            appElement.classList.remove('vip-active');
+            genreDropdown.disabled = true;
+            appState.matchesRemaining = 3; 
+            appState.currentFilter = 'all';
+            genreDropdown.value = 'all';
+            filterGenre();
+        }
+        updateVipUI();
+    }
+
+    function updateVipUI() {
+        const statusText = document.getElementById('vip-status-text');
+        if (appState.isVIP) {
+            statusText.innerText = "💎 VIP Premium Active: Infinite Matches Enabled";
+        } else {
+            statusText.innerText = `💎 Standard Account (${appState.matchesRemaining} Swipes Left)`;
+        }
+    }
+
+    function filterGenre() {
+        const val = document.getElementById('genre').value;
+        appState.currentFilter = val;
+        appState.currentUserIndex = 0;
+
+        if (val === 'all') {
+            appState.filteredUsers = [...mockUsers];
+        } else {
+            appState.filteredUsers = mockUsers.filter(u => u.genre === val);
+        }
+        renderCard();
+    }
+
+    // Touch/Mouse Drag Simulation for physical Swiping
+    function setupDragAndDrop(card) {
+        let startX = 0;
+        let currentX = 0;
+
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag);
+
+        function startDrag(e) {
+            startX = e.clientX || e.touches[0].clientX;
+            document.addEventListener('mousemove', moveDrag);
+            document.addEventListener('touchmove', moveDrag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
+        }
+
+        function moveDrag(e) {
+            currentX = (e.clientX || (e.touches && e.touches[0].clientX)) - startX;
+            card.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.08}deg)`;
+        }
+
+        function endDrag() {
+            document.removeEventListener('mousemove', moveDrag);
+            document.removeEventListener('touchmove', moveDrag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchend', endDrag);
+
+            if (currentX > 100) {
+                swipe('right');
+            } else if (currentX < -100) {
+                swipe('left');
+            } else {
+                card.style.transform = ''; // Reset positioning
+            }
+            currentX = 0;
+        }
+    }
+</script>
+</body>
+</html>
